@@ -1,5 +1,3 @@
-package main.java.Client;
-
 import javax.print.DocFlavor;
 import java.io.*;
 import java.net.InetAddress;
