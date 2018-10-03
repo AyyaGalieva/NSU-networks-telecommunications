@@ -1,4 +1,3 @@
-import javax.print.DocFlavor;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -28,14 +27,10 @@ public class Client {
         }
 
         System.out.println("Connection to:" + address +":" + port);
-        ObjectOutputStream out;
-        BufferedInputStream in;
         File file;
-        ObjectInputStream ois;
-        try {
-            out = new ObjectOutputStream(socket.getOutputStream());
+        try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream())) {
             file = new File(args[0]);
-            ois = new ObjectInputStream(socket.getInputStream());
             out.writeObject(file.getName());
             out.flush();
             int buffSize = 1024;
@@ -45,25 +40,27 @@ public class Client {
             out.writeInt(fileLen);
             out.flush();
 
-            in = new BufferedInputStream(new FileInputStream(file));
-
             int remainLen = fileLen;
             int readBytesCount = 0;
-            while(remainLen > 0) {
-                if (remainLen >= buffSize) {
-                    readBytesCount = in.read(buff);
-                }
-                else {
-                    buff = new byte[remainLen];
-                    readBytesCount = in.read(buff);
-                }
-                remainLen -= readBytesCount;
-                totalReadLength += readBytesCount;
 
-                out.write(buff);
-                out.flush();
-                System.out.println("sent "+ ((float)totalReadLength/fileLen)*100 + "%");
+            try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file))) {
+                while(remainLen > 0) {
+                    if (remainLen >= buffSize) {
+                        readBytesCount = in.read(buff);
+                    }
+                    else {
+                        buff = new byte[remainLen];
+                        readBytesCount = in.read(buff);
+                    }
+                    remainLen -= readBytesCount;
+                    totalReadLength += readBytesCount;
+
+                    out.write(buff);
+                    out.flush();
+                    System.out.println("sent "+ ((float)totalReadLength/fileLen)*100 + "%");
+                }
             }
+
             System.out.println("+----------------| DONE |----------------+");
             LocalTime waitTime = LocalTime.now();
             while(true) {
@@ -79,9 +76,6 @@ public class Client {
                     System.exit(1);
                 }
             }
-            in.close();
-            out.close();
-            ois.close();
             socket.close();
         }catch (FileNotFoundException e) {
             System.err.println("no such file");
